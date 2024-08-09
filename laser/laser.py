@@ -126,7 +126,10 @@ class GcodeExtension(EffectExtension):
 
         self.clear_debug()
         curves = parse_root(root, transform_origin=not self.options.invert_y_axis, root_transformation=transformation,
-                            canvas_height=self.options.bed_height)
+                            canvas_height=self.svg.get_page_bbox().height)
+
+
+
 
         gcode_compiler.append_curves(curves)
         gcode_compiler.compile_to_file(output_path, passes=self.options.passes)
@@ -167,6 +170,8 @@ class GcodeExtension(EffectExtension):
             if origin == "center":
                 change_origin.add_translation(bed_width / 2, bed_height / 2)
 
+            change_origin.add_translation(0, (-self.svg.get_page_bbox().height + bed_height))
+
             path_string = xml_tree.tostring(
                 debug_methods.to_svg_path(approximation, color="red", opacity="0.5",
                                           stroke_width=f"{self.options.debug_line_width}px",
@@ -190,7 +195,7 @@ class GcodeExtension(EffectExtension):
         group.set("{%s}groupmode" % inkscape_name_space, "layer")
         group.set("{%s}label" % inkscape_name_space, "debug reference points")
 
-        reference_points_svg = [(0, 0), (0, bed_height), (bed_width, 0), (bed_width, bed_height)]
+        reference_points_svg = [(0, (self.svg.get_page_bbox().height - bed_height)), (0, self.svg.get_page_bbox().height), (bed_width, (self.svg.get_page_bbox().height - bed_height)), (bed_width, self.svg.get_page_bbox().height)]
         reference_points_gcode = {
             "bottom-left": [(0, bed_height), (0, 0), (bed_width, bed_height), (bed_width, 0)],
             "top-left": [(0, 0), (0, bed_height), (bed_width, 0), (bed_width, bed_height)],
@@ -214,7 +219,7 @@ class GcodeExtension(EffectExtension):
             horizontal.set("style", f"stroke:black;stroke-width:{stroke_width}")
             plus_sign.append(horizontal)
 
-            y_direction = -1 if y > 0 else 1
+            y_direction = -1 if y > (self.svg.get_page_bbox().height - bed_height) else 1
             vertical = etree.Element("{%s}line" % svg_name_space)
             vertical.set("x1", str(x))
             vertical.set("y1", str(y + stroke_width / 2))
